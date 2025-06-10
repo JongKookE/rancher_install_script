@@ -6,7 +6,7 @@ Vagrant.configure("2") do |config|
     master.vm.network "private_network", ip: master_private_ip
 
     master.vm.provider "virtualbox" do |vb|
-      vb.memory = "4096"
+      vb.memory = "2048"
       vb.cpus = "2"
     end
 
@@ -26,8 +26,9 @@ Vagrant.configure("2") do |config|
     worker.vm.network "private_network", ip: "192.168.56.102"
 
     worker.vm.provider "virtualbox" do |vb|
-      vb.memory = "4096"
+      vb.memory = "2048"
       vb.cpus = "2"
     end
+    worker.vm.provision "shell", path: "install_rke2_worker.sh", args: [master_private_ip]
   end
 end
