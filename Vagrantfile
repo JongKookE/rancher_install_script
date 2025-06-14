@@ -1,6 +1,6 @@
 Vagrant.configure("2") do |config|
+  master_private_ip = "192.168.56.101"
   config.vm.define "master" do |master|
-    master_private_ip = "192.168.56.101"
     master.vm.box = "ubuntu/focal64"
     master.vm.hostname = "master"
     master.vm.network "private_network", ip: master_private_ip
