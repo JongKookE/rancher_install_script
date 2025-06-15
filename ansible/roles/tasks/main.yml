@@ -1,0 +1,76 @@
+- name: Disable swap
+  command: swapoff -a
+
+- name: Remove swap from fstab
+  replace:
+    path: /etc/fstab
+    regexp: '^([^#].* swap .*)$'
+    replace: '# \1'
+
+- name: Upgrade packages
+  apt:
+    upgrade: dist
+    update_cache: yes
+
+- name: Stop and disable UFW
+  service:
+    name: ufw
+    state: stopped
+    enabled: no
+
+- name: Flush iptables
+  command: iptables -F
+
+- name: Install RKE2 server
+  shell: curl -sfL https://get.rke2.io | INSTALL_RKE2_TYPE="server" sh -
+
+- name: Enable and start rke2-server service
+  systemd:
+    name: rke2-server.service
+    enabled: yes
+    state: started
+
+- name: Read RKE2 token
+  shell: cat /var/lib/rancher/rke2/server/token
+  register: rke2_token
+
+- name: Copy RKE2 token to shared location
+  copy:
+    content: "{{ rke2_token.stdout }}"
+    dest: /vagrant/rke2_token.txt
+
+- name: Copy kubeconfig
+  copy:
+    src: /etc/rancher/rke2/rke2.yaml
+    dest: /home/vagrant/.kube/config
+    remote_src: yes
+    owner: vagrant
+    group: vagrant
+    mode: 0600
+
+- name: Add kubectl to PATH
+  lineinfile:
+    path: /home/vagrant/.bashrc
+    line: 'export PATH=/usr/local/bin:/var/lib/rancher/rke2/bin:$PATH'
+    state: present
+
+- name: Add kubectl alias
+  lineinfile:
+    path: /home/vagrant/.bashrc
+    line: 'alias k=kubectl'
+    state: present
+
+- name: Download helm install script
+  get_url:
+    url: https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+    dest: /tmp/get_helm.sh
+    mode: '0700'
+
+- name: Install helm
+  command: /tmp/get_helm.sh
+
+- name: Add Jetstack repo
+  shell: helm repo add jetstack https://charts.jetstack.io
+
+- name: Apply cert-manager YAML
+  shell: kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
